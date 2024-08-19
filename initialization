@@ -1,0 +1,27 @@
+//network consts
+
+//gpt
+let costpertoken = [];//assigned by neuron number, represents derivative of cost function
+let convertedlines = [];//giant array for dataset
+let encoders = [];//vectors to encode tokens
+let decoders = [];//vectors to decode tokens
+let key = [];
+let query = [];
+let value = [];
+let returns = [];
+let tokens = [];
+//gpt train
+let mt = [];
+let vt = [];
+let tsp = [];
+let correctcheck = [];
+
+//linear
+let neuronstore = [];
+let weights = [];
+let biases = [];
+let costarr = [];
+
+//generative
+let scores = [];//generation scores
+let currentbest = 0;
