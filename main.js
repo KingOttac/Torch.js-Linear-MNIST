@@ -54,7 +54,7 @@ function setup() {
 }
 
 function preload() {
-	notMNIST = loadTable('MNISTreal.csv', 'csv', 'header');
+	notMNIST = loadTable('MNIST.csv', 'csv', 'header');
 }
 
 function draw() {
