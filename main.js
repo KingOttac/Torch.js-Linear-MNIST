@@ -1,13 +1,14 @@
 //network specific
-let avgcost = 0;
+let avgcost = 1;
 let gen = 1;
-let avgperc = 1;
+let avgperc = 0;
 let MNIST = [];
 let notMNIST;
 let humanarr = [];
 let writemode = false;
 let scalar = 15;
 let grams = 2;
+let chartarrs = [];
 
 //adjustables
 //gpt?
@@ -20,15 +21,16 @@ let smtemp = 1;//temperature of softmax algorithm
 
 //model parameters
 let layers = 3;//hidden layers
-let hiddensize = 40;
+let hiddensize = 80;
 let inputsize = 784;
 let outputsize = 2;
 
 //training
 let wi = 1;//weight initialization values
-let trialspersesh = 40;
-let scale = 2;//activation scale
+let trialspersesh = 1;//runs before data
+let scale = 3;//activation scale
 let learningrate = 0.2;//velocity of adjust
+let correctness = 0.2;//strength of cost
 
 //other
 let outputarr = [0,1];
@@ -50,11 +52,12 @@ function setup() {
 		}
 	}
 	MNIST = Bsort(MNIST,0,false,false,true,0);
+	chartarrs = [[avgcost,avgperc]];
 	
 }
 
 function preload() {
-	notMNIST = loadTable('MNIST.csv', 'csv', 'header');
+	notMNIST = loadTable('MNISTreal.csv', 'csv', 'header');
 }
 
 function draw() {
@@ -71,54 +74,45 @@ function draw() {
 	}//train
 	else if (keyCode == CONTROL) {
 		writemode = true;
-		if (mouseX < 420 && mouseY < 420 && mouseIsPressed) {
-			humanarr[(mouseX/scalar-0.5)+sqrt(inputsize)*(mouseY/scalar-0.5)] = 
-				255-humanarr[humanarr[(mouseX/scalar-0.5)+sqrt(inputsize)*(mouseY/scalar-0.5)]];
+		if (mouseX < scalar*sqrt(inputsize) && mouseY < scalar*sqrt(inputsize) && mouseIsPressed == true) {
+			let loc = round(mouseX/scalar-0.5)+sqrt(inputsize)*round(mouseY/scalar-0.5);
+			humanarr[loc] = 
+				255-humanarr[humanarr[loc]];
 		}
-		getnetguess(humanarr);
+		//runexample(humanarr,"writing",trialspersesh-1);
+		let rline = MNIST[rr(0,MNIST.length/10*grams)];
+		runexample(rline.slice(1,inputsize+1),rline[0],0);//output
 	}//writemode
 
 }
 
-function getnetguess(input) {
-
-	//load data
-	let trainingIs = div2d([CA(input)],maketensor(2,[1,inputsize],255))[0];
-	
-	//gets network's best guess
-	let holdmyarr = runlinear(trainingIs,layers+1,weights,biases);//assigns networks best guess
-	let networkarr = Bsort(CA(holdmyarr[0]),outputarr,false,true);
-	
-	//various ui components and cost stuff
-	stroke(0)
-	fill(0,0,0);	
-	rect(0,0,windowWidth,windowHeight)
-	
-	//draw box
-	for (a = 0; a < sqrt(inputsize); a++) {
-		for (b = 0; b < sqrt(inputsize); b++) {
-			fill(trainingIs[a*sqrt(inputsize)+b]*255);
-			stroke(255);
-			strokeWeight(3);
-			rect(scalar*b,scalar*a,scalar,scalar)
-		}
+function screeninfo(networkarr,correctcheck,totalcost,trainingIs,cc) {
+		
+	//update info
+	if (correctcheck !== "writing") {
+		gen++;
+		avgcost = (avgcost*(gen-1)+totalcost)/gen;
+		avgperc = (avgperc*(gen-1)+int(networkarr[0][0]==correctcheck))/gen;
+		chartarrs[gen-1] = [avgcost,avgperc];
 	}
-	
-	//draw guess
-	textSize(30)
-	fill(255)
-	stroke(0)
-	text("guess: " + networkarr[0][0] + "\n" + 
-			 "confidence: " + networkarr[0][1],7,430);
-	
-}
-
-function screeninfo(networkarr,correctcheck,totalcost,trainingIs) {
-	
-	//various ui components and cost stuff
+	if (cc != trialspersesh-1) {
+		return;
+	}
+		
 	stroke(0)
 	fill(0,0,0);	
 	rect(0,0,windowWidth,windowHeight)
+	
+	//draw charts
+	let gaps = (windowWidth-460)/gen;
+	fill(255);
+	stroke(255);
+	for (a = 0; a < gen-2; a++) {
+		line(a*gaps+440,200-chartarrs[a][0]/outputsize*200,(a+1)*gaps+440,200-chartarrs[a+1][0]/outputsize*200)
+	}
+	for (a = 0; a < gen-2; a++) {
+		line(a*gaps+440,200-chartarrs[a][1]/outputsize*200+300,(a+1)*gaps+440,200-chartarrs[a+1][1]/outputsize*200+300)
+	}
 	
 	//draw box
 	for (a = 0; a < sqrt(inputsize); a++) {
@@ -130,13 +124,8 @@ function screeninfo(networkarr,correctcheck,totalcost,trainingIs) {
 		}
 	}
 	
-	//update info
-	gen++;
-	avgcost = (avgcost*(gen-1)+totalcost)/gen;
-	avgperc = (avgperc*(gen-1)+int(networkarr[0][0]==correctcheck))/gen;
-	
 	//draw info
-	textSize(28)
+	textSize(24)
 	fill(255*(1-int(networkarr[0][0]==correctcheck)),255*int(networkarr[0][0]==correctcheck),0)
 	stroke(0)
 	text("correct: " + correctcheck + "\n" +
@@ -163,13 +152,12 @@ function runexample(input,label,cc) {
 	let totalcost = 0;
 	let costarr = [];
 	for (a = 0; a < networkarr.length; a++) {
-		costarr[networkarr[a][0]] = int(networkarr[a][0]==label)-networkarr[a][1];
-		totalcost += abs(costarr[networkarr[a][0]]);
+		let costval = int(networkarr[a][0]==label)-networkarr[a][1];
+		costarr[networkarr[a][0]] = correctness*costval;
+		totalcost += abs(costval);
 	}
 	
-	if (cc == trialspersesh-1) {
-		screeninfo(networkarr,label,totalcost,CA(input));
-	}
+	screeninfo(networkarr,label,totalcost,CA(input),cc);
 	return costarr;
 	
 }
