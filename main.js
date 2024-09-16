@@ -7,7 +7,7 @@ let notMNIST;
 let humanarr = [];
 let writemode = false;
 let scalar = 15;
-let grams = 2;
+let grams = 10;
 let chartarrs = [];
 
 //adjustables
@@ -27,7 +27,6 @@ let outputsize = 2;
 
 //training
 let wi = 1;//weight initialization values
-let trialspersesh = 1;//runs before data
 let scale = 3;//activation scale
 let learningrate = 0.2;//velocity of adjust
 let correctness = 0.2;//strength of cost
@@ -68,9 +67,11 @@ function draw() {
 			writemode = false;
 			humanarr = maketensor(1,[inputsize],0);
 		}
-		for (cc = 0; cc < trialspersesh; cc++) {
-			trainlinear(cc);
-		}
+		
+		let rline = MNIST[rr(0,MNIST.length/10*grams)];
+		let ink = rline.slice(1,inputsize+1);
+		let labelk = rline[0];
+		trainlinear(ink,labelk);
 	}//train
 	else if (keyCode == CONTROL) {
 		writemode = true;
@@ -79,14 +80,12 @@ function draw() {
 			humanarr[loc] = 
 				255-humanarr[humanarr[loc]];
 		}
-		//runexample(humanarr,"writing",trialspersesh-1);
-		let rline = MNIST[rr(0,MNIST.length/10*grams)];
-		runexample(rline.slice(1,inputsize+1),rline[0],0);//output
+		runexample(humanarr,"writing");
 	}//writemode
 
 }
 
-function screeninfo(networkarr,correctcheck,totalcost,trainingIs,cc) {
+function screeninfo(networkarr,correctcheck,totalcost,trainingIs) {
 		
 	//update info
 	if (correctcheck !== "writing") {
@@ -94,9 +93,6 @@ function screeninfo(networkarr,correctcheck,totalcost,trainingIs,cc) {
 		avgcost = (avgcost*(gen-1)+totalcost)/gen;
 		avgperc = (avgperc*(gen-1)+int(networkarr[0][0]==correctcheck))/gen;
 		chartarrs[gen-1] = [avgcost,avgperc];
-	}
-	if (cc != trialspersesh-1) {
-		return;
 	}
 		
 	stroke(0)
@@ -137,7 +133,7 @@ function screeninfo(networkarr,correctcheck,totalcost,trainingIs,cc) {
 	
 }
 
-function runexample(input,label,cc) {
+function runexample(input,label) {
 	
 	//load data
 	let trainingIs = div2d([CA(input)],maketensor(2,[1,inputsize],255))[0];
@@ -157,7 +153,7 @@ function runexample(input,label,cc) {
 		totalcost += abs(costval);
 	}
 	
-	screeninfo(networkarr,label,totalcost,CA(input),cc);
+	screeninfo(networkarr,label,totalcost,CA(input));
 	return costarr;
 	
 }
