@@ -2,7 +2,7 @@
 let avgcost = 1;
 let gen = 1;
 let avgperc = 0;
-let MNIST = [];
+let MNISTarr = [];
 let notMNIST;
 let humanarr = [];
 let writemode = false;
@@ -45,12 +45,12 @@ function setup() {
 	humanarr = maketensor(1,[inputsize],0);
  	for (a = 0; a < notMNIST.rows.length; a++) {
 		let q = notMNIST.rows[a].arr;
-		MNIST[a] = [];
+		MNISTarr[a] = [];
 		for (b = 0; b < q.length; b++) {
-			MNIST[a][b] = int(q[b]); 
+			MNISTarr[a][b] = int(q[b]); 
 		}
 	}
-	MNIST = Bsort(MNIST,0,false,false,true,0);
+	MNISTarr = Bsort(MNISTarr,0,false,false,true,0);
 	chartarrs = [[avgcost,avgperc]];
 	
 }
@@ -70,7 +70,7 @@ function draw() {
 			humanarr = maketensor(1,[inputsize],0);
 		}
 		
-		let rline = MNIST[rr(0,MNIST.length/10*grams)];
+		let rline = MNISTarr[rr(0,MNISTarr.length/10*grams)];
 		let ink = rline.slice(1,inputsize+1);
 		let labelk = rline[0];
 		trainlinear(ink,labelk);
