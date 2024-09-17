@@ -23,7 +23,7 @@ let smtemp = 1;//temperature of softmax algorithm
 let layers = 3;//hidden layers
 let hiddensize = 80;
 let inputsize = 784;
-let outputsize = 2;
+let outputsize = 10;
 
 //training
 let wi = 1;//weight initialization values
@@ -32,7 +32,7 @@ let learningrate = 0.2;//velocity of adjust
 let correctness = 0.2;//strength of cost
 
 //other
-let outputarr = [0,1];
+let outputarr = [0,1,2,3,4,5,6,7,8,9];
 let addbias = true;
 let type = "sigmoid";
 
@@ -43,7 +43,7 @@ function setup() {
 	loadshitlinear();
 	
 	humanarr = maketensor(1,[inputsize],0);
-	for (a = 0; a < notMNIST.rows.length; a++) {
+ 	for (a = 0; a < notMNIST.rows.length; a++) {
 		let q = notMNIST.rows[a].arr;
 		MNIST[a] = [];
 		for (b = 0; b < q.length; b++) {
@@ -56,7 +56,9 @@ function setup() {
 }
 
 function preload() {
-	notMNIST = loadTable('MNIST.csv', 'csv', 'header');
+
+	notMNIST = loadTable('https://openprocessing-usercontent.s3.amazonaws.com/files/user408235/visual2239193/h45ce709366b8d8c0cd88c5bda9c3a9f3/MNISTreal.csv', 'csv', 'header');
+	
 }
 
 function draw() {
