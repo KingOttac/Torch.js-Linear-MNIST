@@ -1,125 +1,168 @@
 //network specific
+let avgcost = 1;
+let gen = 1;
+let avgperc = 0;
+let MNIST = [];
+let notMNIST;
+let humanarr = [];
+let writemode = false;
+let scalar = 15;
+let grams = 10;
+let chartarrs = [];
 
-//  /X\ indicates it changes function name- need docs
+//adjustables
+//gpt?
+let learningset = 1;//context length
+let heads = 3;
+let querykeydim = 5;//size of smaller dimensional query-key-valuedown space
+let encodesize = 10;//value up, encoder vector size full representation
+let sampleset = 200;//sample data
+let smtemp = 1;//temperature of softmax algorithm
 
-//ADJUSTABLES
-//linear
+//model parameters
+let layers = 3;//hidden layers
+let hiddensize = 80;
+let inputsize = 784;
+let outputsize = 2;
+
+//training
 let wi = 1;//weight initialization values
-let layers = 0;//hidden layers
-let hiddensize = 0;//maximum hidden layer size
-let inputsize = 0;//max input size
-let outputsize = 0;//max output size
-let addbias = false;//add bias values to network
+let scale = 3;//activation scale
+let learningrate = 0.2;//velocity of adjust
+let correctness = 0.2;//strength of cost
 
-//gpt
-let traindat = 0.9;//percentage of data used for gpt training
-let learningset = 0;//context length
-let heads = 0;//heads of gpt network
-let querykeydim = 0;//size of smaller dimensional query-key-valuedown space (less then encodesize)
-let encodesize = 0;//value up, encoder vector size full representation
-let sampleset = 0;//sample data
-let smtemperature = 1;//temperature of softmax algorithm
-let sureness = 0;//gpt training value
-let ffnlayers = 0;//gpt second network layers
-let convthresh = 0;//convergence threshold (0-2)
+//other
+let outputarr = [0,1];
+let addbias = true;
+let type = "sigmoid";
 
-//adamW
-let alpha = 0.001;
-let b1 = 0.9;
-let b2 = 0.999;
-let epsilon = 0.000001;
+function setup() {
 
-//generative
-let newlayer = 0.2;//chance of making new layer in gen
-let weightmult = 2;//weights:neurons+biases ratio
-let iterations = 0;//models on screen
-let timealive = 0;//how long each training epoch lasts
-
-//general
-let trialspersesh = 0;//various uses, used for averaging results
-let learningrate = 0.5;//velocity of training adjustments
-let type = "sigmoid";//type of activation function (sigmoid,RELU,GELU)
-let scale = 1;//normal dist of activation functions
-
-//misc
-let textbox;
-let lines;
-let e = 2.718281828459045;
-let pi = 3.14159265358979;
-
-function screeninfo(totalcost,label,data,netarr) {
+	createCanvas(windowWidth,windowHeight);
+	background(0);
+	loadshitlinear();
 	
-	//write some stuff for screen
+	humanarr = maketensor(1,[inputsize],0);
+	for (a = 0; a < notMNIST.rows.length; a++) {
+		let q = notMNIST.rows[a].arr;
+		MNIST[a] = [];
+		for (b = 0; b < q.length; b++) {
+			MNIST[a][b] = int(q[b]); 
+		}
+	}
+	MNIST = Bsort(MNIST,0,false,false,true,0);
+	chartarrs = [[avgcost,avgperc]];
 	
 }
 
 function preload() {
-	//get some file info
-}
-
-function setup() {
-	
-	createCanvas(windowWidth, windowHeight);
-	background(0);
-	textAlign(CENTER);
-	text(windowWidth/2,windowHeight/2,
-	     "Welcome to Torch.js."+
-		 "\nThis is currently being loaded from the default setup() function."+
-		 "\nPlease go to editable.js to implement code");
-	
-	//load some data
-
-	//loadshit /something\ ();
-	
+	notMNIST = loadTable('MNISTreal.csv', 'csv', 'header');
 }
 
 function draw() {
 	
-	keyPressed();
+	if (keyCode == SHIFT) {
+		keyCode = SHIFT;
+		if (writemode == true) {
+			writemode = false;
+			humanarr = maketensor(1,[inputsize],0);
+		}
+		
+		let rline = MNIST[rr(0,MNIST.length/10*grams)];
+		let ink = rline.slice(1,inputsize+1);
+		let labelk = rline[0];
+		trainlinear(ink,labelk);
+	}//train
+	else if (keyCode == CONTROL) {
+		writemode = true;
+		if (mouseX < scalar*sqrt(inputsize) && mouseY < scalar*sqrt(inputsize) && mouseIsPressed == true) {
+			let loc = round(mouseX/scalar-0.5)+sqrt(inputsize)*round(mouseY/scalar-0.5);
+			humanarr[loc] = 
+				255-humanarr[humanarr[loc]];
+		}
+		runexample(humanarr,"writing");
+	}//writemode
 
+}
+
+function screeninfo(networkarr,correctcheck,totalcost,trainingIs) {
+		
+	//update info
+	if (correctcheck !== "writing") {
+		gen++;
+		avgcost = (avgcost*(gen-1)+totalcost)/gen;
+		avgperc = (avgperc*(gen-1)+int(networkarr[0][0]==correctcheck))/gen;
+		chartarrs[gen-1] = [avgcost,avgperc];
+	}
+		
+	stroke(0)
+	fill(0,0,0);	
+	rect(0,0,windowWidth,windowHeight)
+	
+	//draw charts
+	let gaps = (windowWidth-460)/gen;
+	fill(255);
+	stroke(255);
+	for (a = 0; a < gen-2; a++) {
+		line(a*gaps+440,200-chartarrs[a][0]/outputsize*200,(a+1)*gaps+440,200-chartarrs[a+1][0]/outputsize*200)
+	}
+	for (a = 0; a < gen-2; a++) {
+		line(a*gaps+440,200-chartarrs[a][1]/outputsize*200+300,(a+1)*gaps+440,200-chartarrs[a+1][1]/outputsize*200+300)
+	}
+	
+	//draw box
+	for (a = 0; a < sqrt(inputsize); a++) {
+		for (b = 0; b < sqrt(inputsize); b++) {
+			fill(trainingIs[a*sqrt(inputsize)+b]);
+			stroke(255);
+			strokeWeight(1);
+			rect(scalar*b,scalar*a,scalar,scalar)
+		}
+	}
+	
+	//draw info
+	textSize(24)
+	fill(255*(1-int(networkarr[0][0]==correctcheck)),255*int(networkarr[0][0]==correctcheck),0)
+	stroke(0)
+	text("correct: " + correctcheck + "\n" +
+			 "guess: " + networkarr[0][0] + "\n" + 
+			 "confidence: " + round(networkarr[0][1]*100)/100 + "\n" + 
+			 "avg cost: " + round(avgcost*100)/100 + "\n" + 
+			 "avg correct%: " + round(avgperc*10000)/100 + "%\n" + 
+			 "generation: " + gen,7,450);
+	
+}
+
+function runexample(input,label) {
+	
+	//load data
+	let trainingIs = div2d([CA(input)],maketensor(2,[1,inputsize],255))[0];
+	
+	//gets network's best guess
+	let holdmyarr = runlinear(trainingIs,layers+1,weights,biases);//assigns networks best guess
+	let networkarr = Bsort(CA(holdmyarr[0]),outputarr,false,true);
+	let networkguess = networkarr[0][0];
+	neuronstore = holdmyarr[1];
+	
+	//cost calc
+	let totalcost = 0;
+	let costarr = [];
+	for (a = 0; a < networkarr.length; a++) {
+		let costval = int(networkarr[a][0]==label)-networkarr[a][1];
+		costarr[networkarr[a][0]] = correctness*costval;
+		totalcost += abs(costval);
+	}
+	
+	screeninfo(networkarr,label,totalcost,CA(input));
+	return costarr;
+	
 }
 
 function keyReleased() {
+	
   if (keyCode == SHIFT) {
     keyCode = "";
-		return false;
-  }
-}//press and hold logic
-
-function keyPressed() {
-	
-	if (keyCode == SHIFT) {
-		//call training
 	}
-	
-  return false;
-
-}//train with holding shift
-
-function runexample() {
-//load some data
-		
-	let netarr = /*run/model\(data)*/;
-	let totalcost = 0;
-	for (a = 0; a < netarr.length; a++) {
-		if (netarr[a][0] != label) {
-			totalcost += netarr[a][1];
-			costpertoken[layers][netarr[a][0]] += -1*sureness*netarr[a][1];
-		}
-		else {
-			totalcost += 1-netarr[a][1];
-			costpertoken[layers][netarr[a][0]] += correctness*(1-netarr[a][1]);
-		}
-	}//costcalc
-	screeninfo(/*totalcost,label,data,netarr*/)//draw stuff
-
-	return /*variable*/
-
-}
-function getNetGuess() {
-	
-	//load some data for the network from user
-	
-	//draw stuff on screen
+	return false;
 	
 }
