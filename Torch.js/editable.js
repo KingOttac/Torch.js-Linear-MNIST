@@ -57,7 +57,7 @@ function setup() {
 
 function preload() {
 
-	notMNIST = loadTable('https://openprocessing-usercontent.s3.amazonaws.com/files/user408235/visual2239193/h45ce709366b8d8c0cd88c5bda9c3a9f3/MNISTreal.csv', 'csv', 'header');
+	notMNIST = loadTable('MNIST.csv', 'csv', 'header');
 	
 }
 
