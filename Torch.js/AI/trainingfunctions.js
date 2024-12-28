@@ -127,10 +127,10 @@ function trainGPT(alpha,b1,b2,epsilon) {
 	
 }
 
-function trainlinear(input,label) {
+function trainlinear(tps) {
 	
 	costpertoken = maketensor(2,[layers+1,hiddensize],0,false);//hidden
-	costpertoken[layers] = runexample(input,label);//output
+	costpertoken[layers] = runexample(getinput(),tps == 0);//output
 	for (bb = layers; bb >= 0; bb--) {//layer
 		for (aa = 0; aa < weights[bb].length; aa++) {//first neuron
 			for (aa1 = 0; aa1 < weights[bb][aa].length; aa1++) {//second neuron
@@ -140,12 +140,11 @@ function trainlinear(input,label) {
 					gfd * //in terms of al- derivative of relu w/ respect to zl
 					costpertoken[bb][aa1] *  //in terms of cost- desired change to cost
 					learningrate;
+				biases[bb][aa] += 
+					gfd * //in terms of al- derivative of prev w/ respect to zl
+					costpertoken[bb][aa1] *  //in terms of cost- desired change to cost down the line
+					learningrate;
 				if (bb != 0) {
-					biases[bb-1][aa] += 
-						1 * //in terms of zl- bias does not influence zl
-						gfd * //in terms of al- derivative of prev w/ respect to zl
-						costpertoken[bb][aa1] *  //in terms of cost- desired change to cost down the line
-						learningrate;
 					costpertoken[bb-1][aa] += 
 						weights[bb][aa][aa1] * //in terms of zl- weight is what influences zl
 						gfd * //in terms of al- derivative of relu w/ respect to zl
